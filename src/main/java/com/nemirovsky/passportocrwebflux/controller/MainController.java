@@ -32,4 +32,7 @@ public class MainController {
     public String news() {
         return "Hello Everybody on news page!";
     }
+
+
+
 }

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <title>Login page</title>
+
+        <link rel="stylesheet" th:href="@{/css/bootstrap.min.css}"/>
+        <link rel="stylesheet" th:href="@{/css/main.css}"/>
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+            <a class="navbar-brand" href="#">Home</a>
+        </nav>
+
+        <main role="main" class="container">
+            <div class="starter-template">
+
+                <h1>Login page</h1>
+                <p th:if="${loginError}" class="error">Wrong user or password</p>
+                <form th:action="@{/login}" method="post" class="form login">
+                    <label for="username">Username</label>:
+                    <input type="text" id="username" name="username" autofocus="autofocus"/> <br/>
+                    <label for="password">Password</label>:
+                    <input type="password" id="password" name="password"/> <br/>
+                    <input type="submit" value="Log in"/>
+                </form>
+                <div sec:authorize="isAuthenticated()">
+                    This content is only shown to authenticated users.
+                </div>
+                <div sec:authorize="hasRole('ROLE_ADMIN')">
+                    This content is only shown to administrators.
+                </div>
+                <div sec:authorize="hasRole('ROLE_USER')">
+                    This content is only shown to users.
+                </div>
+            </div>
+        </main>
+        <!-- /.container -->
+        <script type="text/javascript" th:src="@{/js/bootstrap.min.js}"></script>
+    </body>
+</html>

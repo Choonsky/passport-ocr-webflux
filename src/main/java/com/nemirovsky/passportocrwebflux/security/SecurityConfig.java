@@ -2,48 +2,57 @@ package com.nemirovsky.passportocrwebflux.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.LogoutConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.userdetails.MapReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
-import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.authentication.logout.DelegatingServerLogoutHandler;
+import org.springframework.security.web.server.authentication.logout.SecurityContextServerLogoutHandler;
+import org.springframework.security.web.server.authentication.logout.WebSessionServerLogoutHandler;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
-@EnableWebSecurity
+@EnableWebFluxSecurity
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public MapReactiveUserDetailsService userDetailsService() {
+        UserDetails user = User
+                .withUsername("user")
+                .password(passwordEncoder().encode("password"))
+                .roles("USER")
+                .build();
+        return new MapReactiveUserDetailsService(user);
+    }
+    @Bean
+    SecurityWebFilterChain http(ServerHttpSecurity http) throws Exception {
+        // logout handler
+        DelegatingServerLogoutHandler logoutHandler = new DelegatingServerLogoutHandler(
+                new WebSessionServerLogoutHandler(), new SecurityContextServerLogoutHandler()
+        );
+
+        // main ServerHttpSecurity config
         http
-                .csrf().disable()
-                .authorizeHttpRequests((requests) -> requests
-                        .requestMatchers("/", "/about").anonymous()
-                        .requestMatchers("/", "/news").permitAll()
-                        .requestMatchers("/users").hasRole("USER")
-                        .requestMatchers("/admin").hasRole("ADMIN")
-//                        .anyRequest().authenticated()
+                .authorizeExchange((authorize) -> authorize
+                        .pathMatchers("/static/**", "/signup", "/login", "/about").permitAll()
+                        .pathMatchers("/users/**").authenticated()
+                        .pathMatchers("/admin/**").hasRole("ADMIN") // don't need to add "ROLE_"
+                        .anyExchange().denyAll())
+                .httpBasic(withDefaults())
+                .formLogin((form) -> form
+                        .loginPage("/login")
                 )
-                .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
-                .logout(LogoutConfigurer::permitAll);
+                .logout((logout) -> logout.logoutHandler(logoutHandler));
 
         return http.build();
     }
 
     @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails user =
-                User.withDefaultPasswordEncoder()
-                        .username("user")
-                        .password("password")
-                        .roles("USER")
-                        .build();
-
-        return new InMemoryUserDetailsManager(user);
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
